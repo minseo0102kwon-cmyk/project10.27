@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dearly - 나의 기록</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <!-- 상단 메뉴 -->
+    <header class="header">
+        <h1 class="logo">Dearly.</h1>
+
+        <nav class="menu">
+            <a href="#" class="active">홈</a>
+            <a href="#calendar">달력</a>
+            <a href="#posts">내 일기</a>
+        </nav>
+
+        <button class="write-button"
+                onclick="location.href='#write'">
+            + 글쓰기
+        </button>
+    </header>
+
+    <main class="container">
+        <!-- 소개 영역 -->
+        <section class="hero">
+            <p class="subtitle">YOUR NOTES, YOUR STORIES</p>
+            <h2>나의 생각이 기록이 되는 곳</h2>
+            <p>일상의 소소한 이야기부터 특별한 순간까지.</p>
+        </section>
+
+        <!-- 글쓰기 영역 -->
+        <section id="write" class="box">
+            <h2>오늘의 일기</h2>
+            <form id="write-form">
+                <div class="form-row">
+                    <input type="text" id="write-title" placeholder="제목" maxlength="40" required>
+                    <select id="write-category">
+                        <option>일상</option>
+                        <option>생각</option>
+                        <option>여행</option>
+                        <option>기타</option>
+                    </select>
+                </div>
+                <!-- textarea는 Enter로 줄바꿈이 가능합니다 -->
+                <textarea id="write-content" rows="7"
+                          placeholder="오늘 있었던 일을 적어보세요. (Enter로 줄바꿈)" required></textarea>
+                <button type="submit" class="write-button">저장하기</button>
+            </form>
+        </section>
+
+        <!-- 달력 영역 -->
+        <section id="calendar" class="box">
+            <div class="cal-header">
+                <button id="prev-month" class="cal-nav" aria-label="이전 달">‹</button>
+                <h2 id="cal-title"></h2>
+                <button id="next-month" class="cal-nav" aria-label="다음 달">›</button>
+            </div>
+            <div id="cal-grid" class="cal-grid"></div>
+
+            <div class="event-panel">
+                <h3 id="selected-date-label">날짜를 선택하세요</h3>
+                <ul id="event-list" class="event-list"></ul>
+                <div class="form-row">
+                    <input type="text" id="event-input" placeholder="일정 입력" maxlength="20" disabled>
+                    <button id="event-add" class="write-button" disabled>추가</button>
+                </div>
+                <p id="event-msg" class="event-msg"></p>
+            </div>
+        </section>
+
+        <!-- 게시글 영역 -->
+        <section id="posts">
+            <div class="section-header">
+                <div>
+                    <h2>최신 글</h2>
+                    <p>다른 사람들과 함께 나누는 이야기</p>
+                </div>
+                <span id="post-count"></span>
+            </div>
+
+            <div id="post-list" class="post-list"></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Dearly. &copy; 2026</p>
+    </footer>
+</body>
+</html>
