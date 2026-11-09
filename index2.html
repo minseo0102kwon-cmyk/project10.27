@@ -63,7 +63,19 @@
 
             <div class="event-panel">
                 <h3 id="selected-date-label">날짜를 선택하세요</h3>
-                <ul id="event-list" class="event-list"></ul>
+               <ul id="event-list" class="event-list"></ul>
+
+<!-- 추가: 색 선택 -->
+<div id="color-picker" class="color-picker">
+    <button type="button" class="color-dot c-pink" data-color="pink" aria-label="핑크"></button>
+    <button type="button" class="color-dot c-yellow" data-color="yellow" aria-label="노랑"></button>
+    <button type="button" class="color-dot c-green" data-color="green" aria-label="초록"></button>
+    <button type="button" class="color-dot c-blue selected" data-color="blue" aria-label="파랑"></button>
+    <button type="button" class="color-dot c-purple" data-color="purple" aria-label="보라"></button>
+    <button type="button" class="color-dot c-gray" data-color="gray" aria-label="회색"></button>
+</div>
+
+<div class="form-row">
                 <div class="form-row">
                     <input type="text" id="event-input" placeholder="일정 입력" maxlength="20" disabled>
                     <button id="event-add" class="write-button" disabled>추가</button>
