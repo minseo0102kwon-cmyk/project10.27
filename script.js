@@ -1,9 +1,28 @@
-const posts = [
+/* ===== 저장소 도우미 ===== */
+function load(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+        return fallback;
+    }
+}
+
+function save(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+        // 저장 실패 시 무시 (메모리에서는 계속 동작)
+    }
+}
+
+/* ===== 글 데이터 ===== */
+const samplePosts = [
     {
         id: 1,
         category: "일상",
         title: "오늘의 노을이 정말 예뻤다",
-        content: "하루가 끝나가는 시간이 이렇게 아름다울 줄이야. 오랜만에 마음이 편안해졌다.",
+        content: "하루가 끝나가는 시간이 이렇게 아름다울 줄이야.\n오랜만에 마음이 편안해졌다.",
         date: "2026.10.25"
     },
     {
@@ -19,52 +38,272 @@ const posts = [
         title: "주말에 다녀온 작은 여행",
         content: "맑은 공기와 푸른 나무 덕분에 일상의 스트레스를 잠시 잊을 수 있었다.",
         date: "2026.10.22"
-    }, 
-    {
-        id: 4, 
-        category: "학교", 
-        title: "학교에서 공부", 
-        content: "오늘은 학교에서 팀 프로젝트를 시작했다", 
-        date: "2026.10.27"
     }
-    
 ];
 
-// HTML 요소 선택
+// 직접 쓴 글만 저장하고, 화면에는 샘플 글과 합쳐서 보여줌
+let myPosts = load("dearly-posts", []);
+
 const postList = document.querySelector("#post-list");
 const postCount = document.querySelector("#post-count");
 
-// 게시글 개수 표시
-postCount.textContent = `총 ${posts.length}개의 글`;
+function renderPosts() {
+    const posts = [...myPosts, ...samplePosts];
+    postList.innerHTML = "";
+    postCount.textContent = `총 ${posts.length}개의 글`;
 
-// 게시글 카드 생성
-posts.forEach(function(post) {
-    // 카드 요소 생성
-    const card = document.createElement("article");
-    card.className = "post-card";
+    posts.forEach(function (post) {
+        const card = document.createElement("article");
+        card.className = "post-card";
 
-    // 카테고리
-    const category = document.createElement("span");
-    category.className = "category";
-    category.textContent = post.category;
+        const category = document.createElement("span");
+        category.className = "category";
+        category.textContent = post.category;
 
-    // 제목
-    const title = document.createElement("h3");
-    title.textContent = post.title;
+        const title = document.createElement("h3");
+        title.textContent = post.title;
 
-    // 본문
-    const content = document.createElement("p");
-    content.className = "post-content";
-    content.textContent = post.content;
+        // textContent + CSS(white-space: pre-wrap)로 줄바꿈 유지
+        const content = document.createElement("p");
+        content.className = "post-content";
+        content.textContent = post.content;
 
-    // 작성일
-    const date = document.createElement("p");
-    date.className = "post-date";
-    date.textContent = post.date;
+        const date = document.createElement("p");
+        date.className = "post-date";
+        date.textContent = post.date;
 
-    // 카드에 요소 추가
-    card.append(category, title, content, date);
+        card.append(category, title, content, date);
+        postList.appendChild(card);
+    });
+}
 
-    // 게시글 목록에 카드 추가
-    postList.appendChild(card);
+/* ===== 글쓰기 ===== */
+const writeForm = document.querySelector("#write-form");
+const writeTitle = document.querySelector("#write-title");
+const writeCategory = document.querySelector("#write-category");
+const writeContent = document.querySelector("#write-content");
+
+function pad(n) {
+    return String(n).padStart(2, "0");
+}
+
+writeForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const title = writeTitle.value.trim();
+    const content = writeContent.value.trim();
+    if (!title || !content) return;
+
+    const now = new Date();
+    myPosts.unshift({
+        id: Date.now(),
+        category: writeCategory.value,
+        title: title,
+        content: content, // 줄바꿈(\n)이 그대로 저장됨
+        date: `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())}`
+    });
+
+    save("dearly-posts", myPosts);
+    writeForm.reset();
+    renderPosts();
+    location.href = "#posts";
 });
+
+/* ===== 달력 ===== */
+const MAX_EVENTS = 2;
+// 예전에 문자열로 저장된 일정도 깨지지 않게 객체로 바꿔줌
+function normalize(item) {
+    if (typeof item === "string") {
+        return { text: item, color: "blue" };
+    }
+    return item;
+}
+let events = load("dearly-events", {}); // { "2026-11-03": ["일정1", "일정2"] }
+
+const today = new Date();
+let viewYear = today.getFullYear();
+let viewMonth = today.getMonth();
+let selectedDate = null;
+
+const calTitle = document.querySelector("#cal-title");
+const calGrid = document.querySelector("#cal-grid");
+const dateLabel = document.querySelector("#selected-date-label");
+const eventList = document.querySelector("#event-list");
+const eventInput = document.querySelector("#event-input");
+const eventAdd = document.querySelector("#event-add");
+const eventMsg = document.querySelector("#event-msg");
+const colorPicker = document.querySelector("#color-picker");
+let selectedColor = "blue";
+
+colorPicker.addEventListener("click", function (e) {
+    const dot = e.target.closest(".color-dot");
+    if (!dot) return;
+
+    selectedColor = dot.dataset.color;
+    colorPicker.querySelectorAll(".color-dot").forEach(function (d) {
+        d.classList.toggle("selected", d === dot);
+    });
+});
+function dateKey(y, m, d) {
+    return `${y}-${pad(m + 1)}-${pad(d)}`;
+}
+
+function renderCalendar() {
+    calTitle.textContent = `${viewYear}년 ${viewMonth + 1}월`;
+    calGrid.innerHTML = "";
+
+    ["일", "월", "화", "수", "목", "금", "토"].forEach(function (name) {
+        const w = document.createElement("div");
+        w.className = "cal-weekday";
+        w.textContent = name;
+        calGrid.appendChild(w);
+    });
+
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const lastDate = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+        const empty = document.createElement("div");
+        empty.className = "cal-day empty";
+        calGrid.appendChild(empty);
+    }
+
+    for (let d = 1; d <= lastDate; d++) {
+        const key = dateKey(viewYear, viewMonth, d);
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cal-day";
+
+        if (key === dateKey(today.getFullYear(), today.getMonth(), today.getDate())) {
+            cell.classList.add("today");
+        }
+        if (key === selectedDate) {
+            cell.classList.add("selected");
+        }
+
+        const num = document.createElement("span");
+        num.className = "cal-num";
+        num.textContent = d;
+        cell.appendChild(num);
+
+        (events[key] || []).forEach(function (item) {
+    const ev = normalize(item);
+    const tag = document.createElement("span");
+    tag.className = "cal-event c-" + ev.color;
+    tag.textContent = ev.text;
+    cell.appendChild(tag);
+});
+
+        cell.addEventListener("click", function () {
+            selectedDate = key;
+            eventMsg.textContent = "";
+            renderCalendar();
+            renderEventPanel();
+        });
+
+        calGrid.appendChild(cell);
+    }
+}
+
+function renderEventPanel() {
+    eventList.innerHTML = "";
+
+    if (!selectedDate) {
+        dateLabel.textContent = "날짜를 선택하세요";
+        eventInput.disabled = true;
+        eventAdd.disabled = true;
+        return;
+    }
+
+    const [y, m, d] = selectedDate.split("-");
+    dateLabel.textContent = `${y}년 ${Number(m)}월 ${Number(d)}일 일정`;
+
+    const list = events[selectedDate] || [];
+
+   list.forEach(function (item, index) {
+    const ev = normalize(item);
+    const li = document.createElement("li");
+    li.className = "c-" + ev.color;
+
+    const span = document.createElement("span");
+    span.textContent = ev.text;
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "event-delete";
+        del.textContent = "삭제";
+        del.addEventListener("click", function () {
+            list.splice(index, 1);
+            if (list.length === 0) {
+                delete events[selectedDate];
+            } else {
+                events[selectedDate] = list;
+            }
+            save("dearly-events", events);
+            eventMsg.textContent = "";
+            renderCalendar();
+            renderEventPanel();
+        });
+
+        li.append(span, del);
+        eventList.appendChild(li);
+    });
+
+    const full = list.length >= MAX_EVENTS;
+    eventInput.disabled = full;
+    eventAdd.disabled = full;
+    eventInput.placeholder = full ? "하루에 최대 2개까지 가능해요" : "일정 입력";
+}
+
+function addEvent() {
+    if (!selectedDate) return;
+
+    const text = eventInput.value.trim();
+    if (!text) return;
+
+    const list = events[selectedDate] || [];
+    if (list.length >= MAX_EVENTS) {
+        eventMsg.textContent = "하루에 일정은 최대 2개까지 추가할 수 있어요.";
+        return;
+    }
+
+    list.push({ text: text, color: selectedColor });
+    events[selectedDate] = list;
+    save("dearly-events", events);
+
+    eventInput.value = "";
+    eventMsg.textContent = "";
+    renderCalendar();
+    renderEventPanel();
+}
+
+eventAdd.addEventListener("click", addEvent);
+eventInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        addEvent();
+    }
+});
+
+document.querySelector("#prev-month").addEventListener("click", function () {
+    viewMonth--;
+    if (viewMonth < 0) {
+        viewMonth = 11;
+        viewYear--;
+    }
+    renderCalendar();
+});
+
+document.querySelector("#next-month").addEventListener("click", function () {
+    viewMonth++;
+    if (viewMonth > 11) {
+        viewMonth = 0;
+        viewYear++;
+    }
+    renderCalendar();
+});
+
+/* ===== 시작 ===== */
+renderPosts();
+renderCalendar();
+renderEventPanel();
